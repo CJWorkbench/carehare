@@ -1,0 +1,61 @@
+[build-system]
+requires = ["poetry_core>=1.0.0", "poetry-dynamic-versioning>=0.12.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "carehare"
+version = "0.0.0"
+description = "asyncio RabbitMQ client"
+authors = ["Adam Hooper <adam@adamhooper.com>"]
+license = "BSD"
+readme = "README.rst"
+
+[tool.poetry.dependencies]
+python = "~=3.8"
+pamqp = "~=3.0"
+
+[tool.poetry.dev-dependencies]
+mypy = "~=0.800"
+pytest = "~=6.1"
+pytest-asyncio = "~=0.14"
+pytest-cov = "~= 2.10"
+pytest-timeout = "~= 1.4"
+
+[tool.isort]
+# Black compatibility
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+isolated_build = True
+skipsdist = True
+envlist = {py38,py39}-{pyflakes,black,isort,mypy,pytest}
+
+[flake8]
+exclude = venv/*,tox/*,specs/*,build/*
+ignore = E123,E128,E266,E402,W503,E731,W601
+max-line-length = 88
+
+[testenv]
+skip_install = true
+deps =
+  pyflakes: pyflakes>=2.2
+  black: black
+  isort: isort
+  mypy: poetry
+  pytest: poetry
+commands_pre =
+  mypy: poetry install -v
+  pytest: poetry install -v
+commands =
+  pyflakes: pyflakes carehare tests
+  black: black --check carehare tests
+  isort: isort --check --diff carehare tests
+  mypy: poetry run mypy carehare tests --show-error-codes
+  pytest: poetry run pytest --cov=carehare --cov-report term-missing -v
+"""

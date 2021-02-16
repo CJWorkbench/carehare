@@ -1,0 +1,14 @@
+.coverage
+.eggs/
+*.egg-info/
+.pytest_cache/
+*.pyc
+__pycache__/
+test-server/*.cert
+test-server/*.certchain
+test-server/*.csr
+test-server/*.key
+test-server/*.srl
+.pytest_cache/
+.tox/
+poetry.lock
