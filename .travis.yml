@@ -1,0 +1,41 @@
+os: linux
+dist: focal
+language: python
+
+python:
+  - "3.8"
+  - "3.9"
+
+services:
+  - docker
+before_install:
+  # Use Docker rabbitmq instead of Travis'. Travis's doesn't use SSL.
+  - docker pull rabbitmq:3.8.11-alpine
+  - test-server/prepare-certs.sh  # Create SSL certificates used in tests
+  - docker run --rm -it -p 5671:5671 -p 5672:5672 -v "/${TRAVIS_BUILD_DIR}"/test-server:/test-server -e RABBITMQ_SSL_CACERTFILE=/test-server/ca.cert -e RABBITMQ_SSL_CERTFILE=/test-server/server.cert -e RABBITMQ_SSL_KEYFILE=/test-server/server.key -e RABBITMQ_SSL_VERIFY=verify_peer -e RABBITMQ_SSL_FAIL_IF_NO_PEER_CERT=true -e RABBITMQ_CONFIG_FILE=/test-server/rabbitmq rabbitmq:3.8.11-management-alpine
+  # Now it'll start up while we're doing our install. There's a race, but
+  # it's likely rabbitmq will be up before pytest starts.
+  - python -m pip install poetry tox-travis
+install: poetry install -v
+script: tox
+
+jobs:
+  include:
+    - stage: deploy
+      python: "3.9"
+      before_install: python -m pip install poetry
+      install: skip
+      script: skip
+      before_deploy:
+        - poetry version $(git describe --tags --exact-match --match="v*.*.*" | cut -b2-)  # fallback "" means, "0.0.0"
+        - poetry config pypi-token.pypi $PYPI_TOKEN
+      deploy:
+        skip_cleanup: true  # so "poetry version" stays
+        provider: script
+        script: poetry publish --build
+        on:
+          tags: true
+
+env:
+  global:
+    - secure: "MvTW48pch/7IF8hTZUFiGEpY34JObxpQUY5LK1LTImE3BSYAeWdNz94O4ho/D4Tlpzten8Ot/7WqkCT+1UBqf6lG5/DBrN+QVverd7iwbGv3JThrOmGnbre5Jts5qNEfOYjtYXfR5V84DG35K8qYKrLcf1o2XA3CCtsHgKm87f/gNw5quq2ncz6UxSZq/b6Dmn3E67P/dQ9iu5c7RukoJPgAF/5O25w0js44+knJln9fqwq+CJwgWiIQrf3Wb+qE1Wr9/Ff9Af25/CovNKi5sr5PNP3OE8t26PDFiH0lXXjfZcf0lxAbc1Gyxic4Tpu/Exk9ahchuLl3xhXgkkjbrw9qr9xPUtKXAOVEtMrER4mvpZVtPremhW57ky+2CCyS874Q7VHAFwdIURLgfOtuQzPr2oS38pleOhSXwg5AH7ErhMdvAwzUNhNwJU490reHwwY/joyxykB72zjtSvq1Zf76n8r3dxytELtya8a9lFdXa1hBvnbnh2AwCldcJ6smaP5VJvpcL4ngKONFjZb8tiFUTnRALqZPqQuM/ORpB6814CSFvV9iJpTcktbs8+LGyLY7iAtA3CR+Jq+6tZ3R22LVYy6YJA4UgG8wqdGs2EjNyuen7L5rC9RRoU4+GK7JG566D4hLJ9ggm4TFDlCvaNDzQIq6nq++Qb4dl+TPc4M=" # PYPI_TOKEN=...
