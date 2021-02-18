@@ -1,6 +1,7 @@
 from ._connection import Connection, connect
 from ._exceptions import (
     BadBytesFromServer,
+    ChannelClosed,
     ChannelClosedByServer,
     ConnectionClosed,
     ConnectionClosedByHeartbeatMonitor,
@@ -10,6 +11,7 @@ from ._exceptions import (
 
 __all__ = [
     "BadBytesFromServer",
+    "ChannelClosed",
     "ChannelClosedByServer",
     "Connection",
     "ConnectionClosed",

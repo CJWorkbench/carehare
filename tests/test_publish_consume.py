@@ -127,13 +127,29 @@ async def test_consume_ack(connection):
         arguments={"x-max-length": 1, "x-overflow": "reject-publish"},
     )
 
-    async with connection.acking_consumer("messages") as consumer:
-        iterator = consumer.__aiter__()
+    async with connection.acking_consumer("messages", prefetch_count=1) as consumer:
         await connection.publish(b"foo", routing_key="messages")
-        assert await iterator.__anext__() == b"foo"
-        task = asyncio.create_task(iterator.__anext__())  # should ack
+        message, delivery_tag = await consumer.next_delivery()
+        consumer.ack(delivery_tag)
+        # Okay, we're cheating about "async" a little here....
+        #
+        # The idea is: "ack the message, so that the next publish() finds room."
+        # But AMQP is asynchronous. How do we know the ack will be processed
+        # before the next publish? We don't ... but we know it comes earlier
+        # _on the wire_ and the test passes on localhost so let's hope.
         await connection.publish(b"bar", routing_key="messages")
-        assert await task == b"bar"
+        message, delivery_tag = await consumer.next_delivery()
+        assert message == b"bar"
+
+
+@ASYNC_TEST
+async def test_close_consumer_during_next_delivery(connection):
+    await connection.queue_declare("messages", exclusive=True)
+    async with connection.acking_consumer("messages") as consumer:
+        task = asyncio.create_task(consumer.next_delivery())
+
+    with pytest.raises(carehare.ChannelClosed):
+        await task
 
 
 @ASYNC_TEST

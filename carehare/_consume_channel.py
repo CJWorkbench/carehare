@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from functools import singledispatchmethod
-from typing import Callable, List, NamedTuple, Optional
+from typing import Callable, List, NamedTuple, Optional, Tuple
 
 import pamqp.base
 import pamqp.body
@@ -12,7 +12,7 @@ import pamqp.exceptions
 import pamqp.header
 
 from ._channel import AcceptableFrame, Channel
-from ._exceptions import ChannelClosedByServer, ConnectionClosed
+from ._exceptions import ChannelClosed, ChannelClosedByServer, ConnectionClosed
 from ._frame_writer import FrameWriter
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,25 @@ class _Delivery(NamedTuple):
     def add_BODY(self, body: pamqp.body.ContentBody) -> _Delivery:
         """Return a _Delivery with an added body frame."""
         return self._replace(body=self.body + [body])
+
+
+async def _next_delivery(
+    queue: asyncio.Queue, closed: asyncio.Future
+) -> Tuple[bytes, int]:
+    delivery_task = asyncio.create_task(queue.get())
+    done, pending = await asyncio.wait(
+        (delivery_task, closed), return_when=asyncio.FIRST_COMPLETED
+    )
+    if delivery_task in done:
+        delivery = delivery_task.result()
+        return (
+            b"".join(body.value for body in delivery.body),
+            delivery.deliver.delivery_tag,
+        )
+    else:  # `self.closed` in Done
+        delivery_task.cancel()
+        closed.result()  # raise exception if there is one
+        raise ChannelClosed
 
 
 class ConsumeChannelIterator:
@@ -51,18 +70,14 @@ class ConsumeChannelIterator:
         if self._yielded_delivery_tag is not None:
             self._ack(self._yielded_delivery_tag)
 
-        delivery_task = asyncio.create_task(self._queue.get())
-        done, pending = await asyncio.wait(
-            (delivery_task, self._closed), return_when=asyncio.FIRST_COMPLETED
-        )
-        if delivery_task in done:
-            delivery = delivery_task.result()
-            self._yielded_delivery_tag = delivery.deliver.delivery_tag
-            return b"".join(body.value for body in delivery.body)
-        else:  # `self.closed` in Done
-            delivery_task.cancel()
-            self._closed.result()  # raise exception if there is one
-            raise StopAsyncIteration
+        try:
+            message, self._yielded_delivery_tag = await _next_delivery(
+                self._queue, self._closed
+            )
+            return message
+        except ChannelClosed:
+            raise StopAsyncIteration from None
+        # Other exceptions we'll re-raise.
 
 
 class ConsumeChannel(Channel):
@@ -93,7 +108,15 @@ class ConsumeChannel(Channel):
             ]
         )
 
-    def _ack_if_not_closing(self, delivery_tag: int):
+    def ack(self, delivery_tag: int):
+        """Write Basic.Ack to RabbitMQ.
+
+        This method is _synchronous_: it marks the _beginning_ of an ack. You
+        can't know whether RabbitMQ will receive the ack.
+
+        If you call this during channel close or connection close, nothing will
+        happen.
+        """
         self._frame_writer.send_frame(
             pamqp.commands.Basic.Ack(delivery_tag=delivery_tag),
         )
@@ -158,6 +181,21 @@ class ConsumeChannel(Channel):
         else:
             self._delivery = delivery
 
+    async def next_delivery(self) -> Tuple[bytes, int]:
+        """Receive a (message, delivery_tag) tuple from RabbitMQ.
+
+        The caller must call consumer.ack(delivery_tag), or RabbitMQ may deliver
+        the message to another client.
+
+        Raise ConnectionClosed if we (or RabbitMQ) closed the connection.
+
+        Raise ChannelClosedByServer if RabbitMQ sends us an error.
+
+        Raise ChannelClosed if we closed the channel.
+        """
+        # raise ConnectionClosed, ChannelClosedByServer
+        return await _next_delivery(self._queue, self.closed)
+
     def close(self):
         if not self.closed.done():
             self._frame_writer.send_close()
@@ -186,6 +224,4 @@ class ConsumeChannel(Channel):
         await self.closed
 
     def __aiter__(self):
-        return ConsumeChannelIterator(
-            self._queue, self.closed, self._ack_if_not_closing
-        )
+        return ConsumeChannelIterator(self._queue, self.closed, self.ack)

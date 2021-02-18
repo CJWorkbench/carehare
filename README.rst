@@ -48,7 +48,10 @@ Consumer (``next_delivery``)::
                 async with connection.acking_consumer("my-queue") as consumer:
                     while True:
                         message, delivery_tag = await consumer.next_delivery()
-                        consumer.ack(delivery_tag)  # synchronous!
+                        # You must ack() (with no await). If RabbitMQ doesn't
+                        # receive this ack, it may deliver the same message to
+                        # another client.
+                        consumer.ack(delivery_tag)
                         if message.startswith(b"okay, go away now"):
                             break
             except carehare.ChannelClosedByServer:

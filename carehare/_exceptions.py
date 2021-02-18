@@ -29,6 +29,10 @@ class ServerSentNack(Exception):
     """The RabbitMQ sent a "nack" in publisher_confirms mode."""
 
 
+class ChannelClosed(Exception):
+    """The channel is closed, so your operation cannot go on."""
+
+
 class ChannelClosedByServer(Exception):
     """The server sent a Close() frame."""
 
