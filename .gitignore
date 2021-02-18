@@ -4,6 +4,7 @@
 .pytest_cache/
 *.pyc
 __pycache__/
+dist/
 test-server/*.cert
 test-server/*.certchain
 test-server/*.csr
