@@ -12,7 +12,7 @@ before_install:
   # Use Docker rabbitmq instead of Travis'. Travis's doesn't use SSL.
   - docker pull rabbitmq:3.8.11-alpine
   - test-server/prepare-certs.sh  # Create SSL certificates used in tests
-  - docker run --rm -it -p 5671:5671 -p 5672:5672 -v "/${TRAVIS_BUILD_DIR}"/test-server:/test-server -e RABBITMQ_SSL_CACERTFILE=/test-server/ca.cert -e RABBITMQ_SSL_CERTFILE=/test-server/server.cert -e RABBITMQ_SSL_KEYFILE=/test-server/server.key -e RABBITMQ_SSL_VERIFY=verify_peer -e RABBITMQ_SSL_FAIL_IF_NO_PEER_CERT=true -e RABBITMQ_CONFIG_FILE=/test-server/rabbitmq rabbitmq:3.8.11-management-alpine
+  - docker run --rm -d -p 5671:5671 -p 5672:5672 -v "/${TRAVIS_BUILD_DIR}"/test-server:/test-server -e RABBITMQ_SSL_CACERTFILE=/test-server/ca.cert -e RABBITMQ_SSL_CERTFILE=/test-server/server.cert -e RABBITMQ_SSL_KEYFILE=/test-server/server.key -e RABBITMQ_SSL_VERIFY=verify_peer -e RABBITMQ_SSL_FAIL_IF_NO_PEER_CERT=true -e RABBITMQ_CONFIG_FILE=/test-server/rabbitmq rabbitmq:3.8.11-management-alpine
   # Now it'll start up while we're doing our install. There's a race, but
   # it's likely rabbitmq will be up before pytest starts.
   - python -m pip install poetry tox-travis
