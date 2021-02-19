@@ -57,3 +57,11 @@ async def test_connect_timeout():
     with pytest.raises(asyncio.TimeoutError):
         async with carehare.connect(URL, ssl=SSL_CONTEXT, connect_timeout=0.000000001):
             pass
+
+
+@ASYNC_TEST
+async def test_connect_manually():
+    connection = carehare.Connection(url=URL, ssl=SSL_CONTEXT)
+    await connection.connect()
+    await connection.close()
+    await connection.closed  # wait doubly -- to test the property is correct

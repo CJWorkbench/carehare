@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import ssl
 from functools import partial
-from typing import Optional, Union
+from typing import Optional, Union, cast
 from urllib.parse import urlparse
 
 import pamqp.commands
@@ -25,7 +25,13 @@ class Connection:
         self._ssl = ssl
         self._connect_timeout = connect_timeout
 
-    async def __aenter__(self):
+    async def connect(self) -> None:
+        """Alternative to `async with` syntax.
+
+        Return if we are connected. Raise if connect fails.
+
+        Do not call this twice on one connection.
+        """
         url = urlparse(self._url)
         if url.scheme not in {"amqp", "amqps"}:
             raise ValueError(
@@ -58,13 +64,28 @@ class Connection:
             ),
             timeout=self._connect_timeout,
         )
-        self._protocol = protocol
+        self._protocol = cast(Protocol, protocol)
         await self._protocol.open
+
+    async def __aenter__(self):
+        await self.connect()
         return self
 
+    @property
+    def closed(self) -> asyncio.Future[None]:
+        """Future that resolves when we are closed.
+
+        If closing fails, this Future will have an exception.
+        """
+        return self._protocol.closed
+
     async def close(self):
+        """Alternative to `async with` syntax.
+
+        You may call this multiple times on a single connection.
+        """
         self._protocol.send_close_if_allowed()
-        await self._protocol.closed
+        await self.closed
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         await self.close()  # or raise an exception atop the original exception
