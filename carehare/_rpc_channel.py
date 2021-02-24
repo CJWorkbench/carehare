@@ -1,5 +1,6 @@
 import asyncio
 from functools import singledispatchmethod
+from typing import FrozenSet
 
 import pamqp.base
 import pamqp.commands
@@ -15,8 +16,10 @@ class RpcChannel(Channel):
         self,
         frame: pamqp.base.Frame,
         frame_writer: FrameWriter,
+        ignored_frame_types: FrozenSet[type],
     ) -> None:
         self._frame_writer = frame_writer
+        self._ignored_frame_types = ignored_frame_types
         self.done: asyncio.Future[None] = asyncio.Future()
 
         self._frame_writer.send_frames(
@@ -34,6 +37,10 @@ class RpcChannel(Channel):
 
     @singledispatchmethod
     def accept_frame(self, frame: AcceptableFrame) -> None:
+        print(repr(frame))
+        if type(frame) in self._ignored_frame_types:
+            return
+
         raise NotImplementedError("Unexpected frame: %r" % frame)  # pragma: no cover
 
     @accept_frame.register

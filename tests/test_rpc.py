@@ -28,6 +28,14 @@ async def test_multiple_rpcs(connection):
 
 
 @ASYNC_TEST
+async def test_queue_bind_unbind(connection):
+    await connection.exchange_declare("bind-test")
+    await connection.queue_declare("queue1", exclusive=True)
+    await connection.queue_bind("queue1", "bind-test", routing_key="hi")
+    await connection.queue_unbind("queue1", "bind-test", routing_key="hi")
+
+
+@ASYNC_TEST
 async def test_queue_declare_connection_closed(connection):
     future = connection.queue_declare("queue", exclusive=True)
     await connection.close()

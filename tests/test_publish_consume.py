@@ -167,3 +167,23 @@ async def test_publish_on_exchange(connection):
             break
 
     # leak the exchange. It'll be shared among all tests.
+
+
+@ASYNC_TEST
+async def test_publish_on_exchange_after_unbind(connection):
+    # tests some RPC methods
+    await connection.exchange_declare(exchange_name="groups", exchange_type="direct")
+    await connection.queue_declare("foo", exclusive=True)
+    await connection.queue_bind("foo", "groups", routing_key="bar")
+    await connection.queue_unbind("foo", "groups", routing_key="bar")
+
+    await connection.publish(b"bar", exchange_name="groups", routing_key="bar")
+
+    async with connection.acking_consumer("foo") as consumer:
+        getter = asyncio.create_task(consumer.next_delivery())
+        done, pending = await asyncio.wait({getter}, timeout=0.1)
+        assert not done  # message wasn't routed to us
+    with pytest.raises(carehare.ChannelClosed):
+        await getter
+
+    # leak the exchange. It'll be shared among all tests.

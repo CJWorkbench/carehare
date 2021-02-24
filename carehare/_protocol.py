@@ -6,7 +6,7 @@ import logging
 import platform
 import struct
 from functools import singledispatchmethod
-from typing import Dict, Optional, Tuple, Type, Union, cast
+from typing import Dict, FrozenSet, Optional, Tuple, Type, Union, cast
 
 import pamqp.common
 import pamqp.exceptions
@@ -385,7 +385,11 @@ class Protocol(asyncio.Protocol):
                 ),
             )
 
-    def rpc(self, frame: pamqp.base.Frame) -> asyncio.Future[None]:
+    def rpc(
+        self,
+        frame: pamqp.base.Frame,
+        ignored_frame_types: FrozenSet[type] = frozenset(),
+    ) -> asyncio.Future[None]:
         """Call a method remotely, with no return value.
 
         This pattern is useful for, say, queue.declare and such. The steps:
@@ -399,11 +403,15 @@ class Protocol(asyncio.Protocol):
         We return the Future that is set by the server response.
 
         Raise pamqp.exceptions.Exception if the server responds with an error.
+
+        Raise NotImplementedError if the server responds with a frame we don't
+        expect. Pass `ignore_frame_types` to allow and ignore certain frames.
         """
         channel_id = self._channel_id_store.acquire()
         channel = RpcChannel(
             frame,
             frame_writer=FrameWriter(self._transport, channel_id),
+            ignored_frame_types=ignored_frame_types,
         )
         self._channels[channel_id] = channel
         self._closing_channels[channel_id] = None  # RPC channels close during init

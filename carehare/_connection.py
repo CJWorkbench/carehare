@@ -173,24 +173,6 @@ class Connection:
             )
         )
 
-    def queue_unbind(
-        self,
-        queue_name: str,
-        exchange_name: str,
-        *,
-        routing_key: str = "",
-        arguments: pamqp.common.Arguments = None,
-    ) -> asyncio.Future[None]:
-        return self._protocol.rpc(
-            pamqp.commands.Queue.Unbind(
-                queue=queue_name,
-                exchange=exchange_name,
-                routing_key=routing_key,
-                nowait=True,
-                arguments=arguments,
-            )
-        )
-
     def queue_declare(
         self,
         queue_name: str,
@@ -211,6 +193,24 @@ class Connection:
                 nowait=True,
                 arguments=arguments,
             )
+        )
+
+    def queue_unbind(
+        self,
+        queue_name: str,
+        exchange_name: str,
+        *,
+        routing_key: str = "",
+        arguments: pamqp.common.Arguments = None,
+    ) -> asyncio.Future[None]:
+        return self._protocol.rpc(
+            pamqp.commands.Queue.Unbind(
+                queue=queue_name,
+                exchange=exchange_name,
+                routing_key=routing_key,
+                arguments=arguments,
+            ),
+            ignored_frame_types=frozenset([pamqp.commands.Queue.UnbindOk]),
         )
 
 
