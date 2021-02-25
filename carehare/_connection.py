@@ -45,7 +45,10 @@ class Connection:
         addr = url.netloc.split("@")[-1].split(":")
         if len(addr) == 1:
             host = addr[0]
-            port = {"amqp": 5672, "amqps": 5671}[url.scheme]
+            if ssl is None:
+                port = 5672
+            else:
+                port = 5671
         else:
             host = addr[0]
             port = int(addr[1])

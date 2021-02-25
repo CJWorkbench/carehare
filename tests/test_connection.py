@@ -42,6 +42,12 @@ async def test_connect_port():
 
 
 @ASYNC_TEST
+async def test_connect_port_5671_if_ssl_is_set():
+    async with carehare.connect(URL.replace("amqps://", "amqp://"), ssl=SSL_CONTEXT):
+        pass
+
+
+@ASYNC_TEST
 async def test_close_when_rabbitmq_closes_with_error():
     with pytest.raises(carehare.ConnectionClosedByServer) as cm:
         async with carehare.connect(URL, ssl=SSL_CONTEXT) as connection:
