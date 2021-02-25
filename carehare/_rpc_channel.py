@@ -37,7 +37,6 @@ class RpcChannel(Channel):
 
     @singledispatchmethod
     def accept_frame(self, frame: AcceptableFrame) -> None:
-        print(repr(frame))
         if type(frame) in self._ignored_frame_types:
             return
 
