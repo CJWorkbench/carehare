@@ -42,9 +42,13 @@ async def test_connect_port():
 
 
 @ASYNC_TEST
-async def test_connect_port_5671_if_ssl_is_set():
-    async with carehare.connect(URL.replace("amqps://", "amqp://"), ssl=SSL_CONTEXT):
-        pass
+async def test_connect_warn_amqp_should_be_amqps():
+    with pytest.raises(ValueError) as cm:
+        async with carehare.connect(
+            URL.replace("amqps://", "amqp://"), ssl=SSL_CONTEXT
+        ):
+            pass
+    assert "you must not provide `ssl`" in str(cm.value)
 
 
 @ASYNC_TEST

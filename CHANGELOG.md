@@ -1,9 +1,8 @@
 v0.0.5 - 2021-02-25
 ~~~~~~~~~~~~~~~~~~~
 
-* When guessing port from URL, prefer port `5671` if SSL is enabled.
-  (Previously, carehare would pick `5672` if the URL started with
-  `amqp://` instead of `amqps://`.)
+* Raise `ValueError` if user asks for SSL "amqp://" or non-SSL "amqps://".
+  This conforms with the [URI spec](https://www.rabbitmq.com/uri-spec.html).
 
 v0.0.4 - 2021-02-24
 ~~~~~~~~~~~~~~~~~~~

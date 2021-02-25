@@ -18,7 +18,7 @@ class Connection:
         self,
         url: str,
         *,
-        ssl: Union[bool, ssl.SSLContext, None] = None,
+        ssl: Union[ssl.SSLContext, None] = None,
         connect_timeout: Optional[float] = None,
     ):
         self._url = url
@@ -38,17 +38,15 @@ class Connection:
                 "url must start with 'amqp://' or 'amqps://'; got: %r" % self._url
             )
 
-        ssl = self._ssl
-        if ssl is None:
-            ssl = url.scheme == "amqps"
+        if self._ssl is not None and url.scheme == "amqp":
+            raise ValueError(
+                "When `url` starts with 'amqp://', you must not provide `ssl`. Either omit the `ssl` argument, or make `url` start with 'amqps://'"
+            )
 
         addr = url.netloc.split("@")[-1].split(":")
         if len(addr) == 1:
             host = addr[0]
-            if ssl is None:
-                port = 5672
-            else:
-                port = 5671
+            port = {"amqp": 5672, "amqps": 5671}[url.scheme]
         else:
             host = addr[0]
             port = int(addr[1])
@@ -63,7 +61,7 @@ class Connection:
                 ),
                 host=host,
                 port=port,
-                ssl=ssl,
+                ssl=self._ssl or url.scheme == "amqps",
             ),
             timeout=self._connect_timeout,
         )
@@ -220,7 +218,7 @@ class Connection:
 def connect(
     url: str,
     *,
-    ssl: Union[bool, ssl.SSLContext, None] = None,
+    ssl: Union[ssl.SSLContext, None] = None,
     connect_timeout: Optional[float] = None,
 ) -> Connection:
     return Connection(url, ssl=ssl, connect_timeout=connect_timeout)
