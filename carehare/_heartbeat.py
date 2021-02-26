@@ -1,7 +1,10 @@
 import asyncio
+import logging
 from typing import Callable
 
 import pamqp.heartbeat
+
+logger = logging.getLogger(__name__)
 
 _HEARTBEAT_BYTES = pamqp.heartbeat.Heartbeat.marshal()
 
@@ -36,14 +39,17 @@ class HeartbeatSender:
         self._loop = asyncio.get_running_loop()
         self._t0 = self._loop.time()
         self._n = 1
-        self._timer = self._loop.call_at(self._t0 + heartbeat / 2, self._beat)
+        self._interval = heartbeat / 2
+        logger.debug("Sending heartbeats every %fs...", self._interval)
+        self._timer = self._loop.call_at(self._t0 + self._interval / 2, self._beat)
 
     def _beat(self):
         """Must be called by self._timer."""
+        logger.debug("Sending heartbeat")
         self._transport.write(_HEARTBEAT_BYTES)
         self._n += 1
         self._timer = self._loop.call_at(
-            self._t0 + self._heartbeat * self._n / 2, self._beat
+            self._t0 + self._interval * self._n, self._beat
         )
 
     def cancel(self):
@@ -75,24 +81,25 @@ class HeartbeatMonitor:
         self._heartbeat = heartbeat
         self._on_dead = on_dead
         self._loop = asyncio.get_running_loop()
-        self._t0 = self._loop.time()
-        self._saw_data_since_last_beat = True
-        self._n = 1
-        self._timer = self._loop.call_at(self._t0 + heartbeat, self._beat)
+        self._last_data_time = self._loop.time()
+        self._timer = self._loop.call_at(self._last_data_time + heartbeat, self._beat)
 
     def _beat(self):
         """Must be called by self._timer."""
-        if self._saw_data_since_last_beat:
-            self._saw_data_since_last_beat = False
-            self._n += 1
-            self._timer = self._loop.call_at(
-                self._t0 + self._heartbeat * self._n, self._beat
-            )
-        else:
+        time = self._loop.time()
+        diff = time - self._last_data_time
+        logger.debug(
+            "Heartbeat monitor: last data came %fs ago (heartbeat is %ds)",
+            diff,
+            self._heartbeat,
+        )
+        if diff > self._heartbeat:
             self._on_dead()
+        else:
+            self._timer = self._loop.call_later(self._heartbeat, self._beat)
 
     def reset(self):
-        self._saw_data_since_last_beat = True
+        self._last_data_time = self._loop.time()
 
     def cancel(self):
         self._timer.cancel()
