@@ -17,13 +17,11 @@ from ._frame_writer import FrameWriter
 
 class ExchangeChannel(Channel):
     def __init__(
-        self,
-        exchange_name: str,
-        *,
-        frame_writer: FrameWriter,
+        self, exchange_name: str, *, frame_writer: FrameWriter, frame_max: int
     ) -> None:
         self.exchange_name = exchange_name
         self._frame_writer = frame_writer
+        self._frame_max = frame_max
         self._delivering: Dict[int, asyncio.Future] = {}
         self._next_delivery_tag = 1
 
@@ -77,13 +75,21 @@ class ExchangeChannel(Channel):
         self._delivering.clear()
 
     def publish(self, message: bytes, routing_key: str = "") -> asyncio.Future[None]:
+        if not message:
+            body_frames = [pamqp.body.ContentBody(value=b"")]
+        else:
+            body_frames = [
+                pamqp.body.ContentBody(value=message[i : i + self._frame_max])
+                for i in range(0, len(message), self._frame_max)
+            ]
+
         self._frame_writer.send_frames(
             [
                 pamqp.commands.Basic.Publish(
                     exchange=self.exchange_name, routing_key=routing_key
                 ),
                 pamqp.header.ContentHeader(body_size=len(message)),
-                pamqp.body.ContentBody(value=message),
+                *body_frames,
             ]
         )
         done: asyncio.Future[None] = asyncio.Future()

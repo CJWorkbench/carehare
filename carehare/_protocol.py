@@ -437,10 +437,15 @@ class Protocol(asyncio.Protocol):
 
     def _get_exchange_channel(self, exchange_name: str) -> ExchangeChannel:
         if exchange_name not in self._exchange_channels:
+            frame_max = cast(
+                pamqp.commands.Connection.Tune,
+                self._lifecycle[pamqp.commands.Connection.Tune],
+            ).frame_max
             channel_id = self._channel_id_store.acquire()
             channel = ExchangeChannel(
                 exchange_name,
                 frame_writer=FrameWriter(self._transport, channel_id),
+                frame_max=frame_max,
             )
             self._channels[channel_id] = channel
             self._exchange_channels[exchange_name] = channel
