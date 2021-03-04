@@ -1,3 +1,14 @@
+v0.0.10 - 2012-03-04
+~~~~~~~~~~~~~~~~~~~~
+
+* Nix assertion that fails with uvloop
+* Fix send and receive of zero-length message
+
+v0.0.9 - 2012-03-04
+~~~~~~~~~~~~~~~~~~~
+
+No changes
+
 v0.0.8 - 2021-02-28
 ~~~~~~~~~~~~~~~~~~~
 

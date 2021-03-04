@@ -30,6 +30,14 @@ async def test_publish_and_consume(connection):
 
 
 @ASYNC_TEST
+async def test_publish_and_consume_empty_message(connection):
+    await connection.queue_declare("messages", exclusive=True)
+    await connection.publish(b"", routing_key="messages")
+    async with connection.acking_consumer("messages") as consumer:
+        assert await consumer.next_delivery() == (b"", 1)
+
+
+@ASYNC_TEST
 async def test_publish_and_consume_large_message_in_chunks(connection):
     message = b"\x00" * (1024 * 1024 + 1)
     await connection.queue_declare("messages", exclusive=True)

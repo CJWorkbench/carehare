@@ -72,10 +72,9 @@ class Protocol(asyncio.Protocol):
         self._closing: bool = False
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
-        assert isinstance(transport, asyncio.WriteTransport)
-        self._transport = transport
+        self._transport = cast(asyncio.WriteTransport, transport)
         self._transport.write(pamqp.header.ProtocolHeader().marshal())  # ref: 2.2.4
-        self._frame_writer = FrameWriter(transport, 0)
+        self._frame_writer = FrameWriter(self._transport, 0)
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         # ... we'll look to many places for exceptions that may supercede the

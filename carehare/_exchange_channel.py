@@ -75,13 +75,10 @@ class ExchangeChannel(Channel):
         self._delivering.clear()
 
     def publish(self, message: bytes, routing_key: str = "") -> asyncio.Future[None]:
-        if not message:
-            body_frames = [pamqp.body.ContentBody(value=b"")]
-        else:
-            body_frames = [
-                pamqp.body.ContentBody(value=message[i : i + self._frame_max])
-                for i in range(0, len(message), self._frame_max)
-            ]
+        body_frames = [
+            pamqp.body.ContentBody(value=message[i : i + self._frame_max])
+            for i in range(0, len(message), self._frame_max)
+        ]
 
         self._frame_writer.send_frames(
             [

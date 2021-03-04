@@ -160,26 +160,25 @@ class ConsumeChannel(Channel):
         self._raise_if_delivery_is_set()
         self._delivery = _Delivery(frame)
 
+    def _enqueue_delivery_if_complete(self):
+        received = sum(len(frame.value) for frame in self._delivery.body)
+        if received >= self._delivery.header.body_size:
+            self._queue.put_nowait(self._delivery)
+            self._delivery = None
+
     @accept_frame.register  # type: ignore[no-redef]
     def _(self, frame: pamqp.header.ContentHeader) -> None:  # type: ignore[no-redef]
         assert self._delivery is not None
         assert self._delivery.header is None
         self._delivery = self._delivery.add_HEADER(frame)  # Raises AMQPUnexpectedFrame
+        self._enqueue_delivery_if_complete()
 
     @accept_frame.register  # type: ignore[no-redef]
     def _(self, frame: pamqp.body.ContentBody) -> None:  # type: ignore[no-redef]
         assert self._delivery is not None
         assert self._delivery.header is not None
-        delivery = self._delivery.add_BODY(frame)
-
-        if (
-            sum(len(frame.value) for frame in delivery.body)
-            >= self._delivery.header.body_size
-        ):
-            self._queue.put_nowait(delivery)
-            self._delivery = None
-        else:
-            self._delivery = delivery
+        self._delivery = self._delivery.add_BODY(frame)
+        self._enqueue_delivery_if_complete()
 
     async def next_delivery(self) -> Tuple[bytes, int]:
         """Receive a (message, delivery_tag) tuple from RabbitMQ.
