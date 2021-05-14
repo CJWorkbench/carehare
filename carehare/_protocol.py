@@ -453,5 +453,24 @@ class Protocol(asyncio.Protocol):
     def publish(
         self, message: bytes, *, exchange_name: str, routing_key: str
     ) -> asyncio.Future[None]:
+        """Publish `message` to RabbitMQ; complete after RabbitMQ acknowledges.
+
+        Raise `ServerSentNack` if the delivery failed -- for instance, writing
+        to an already-full queue.
+
+        Raise `ConnectionClosed` if the connection to RabbitMQ closes before
+        delivery completes.
+
+        Raise `ChannelClosedByServer` if RabbitMQ reports an error -- for
+        instance, an invalid exchange name. This error will be raised on all
+        pending `publish()` calls on the exchange in question.
+
+        The first time you publish on an exchange (including the `default`
+        exchange), carehare opens a channel for that exchange. The channel is
+        reused for every publish. This reuse cuts down overhead.
+        """
+        if self.closed.done():
+            raise ConnectionClosed("Refusing to publish() after close")
+
         exchange_channel = self._get_exchange_channel(exchange_name)
         return exchange_channel.publish(message, routing_key=routing_key)

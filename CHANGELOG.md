@@ -1,10 +1,16 @@
-v0.0.10 - 2012-03-04
+v0.0.11 - 2021-05-14
+~~~~~~~~~~~~~~~~~~~~
+
+* `Connection.publish()`: raise `ConnectionClosed` instead of stalling when the
+  connection has been closed before `publish()` was called.
+
+v0.0.10 - 2021-03-04
 ~~~~~~~~~~~~~~~~~~~~
 
 * Nix assertion that fails with uvloop
 * Fix send and receive of zero-length message
 
-v0.0.9 - 2012-03-04
+v0.0.9 - 2021-03-04
 ~~~~~~~~~~~~~~~~~~~
 
 No changes

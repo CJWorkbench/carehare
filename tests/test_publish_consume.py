@@ -14,6 +14,22 @@ async def test_publish_to_missing_exchange(connection):
 
 
 @ASYNC_TEST
+async def test_publish_on_closed_exchange_channel(connection):
+    # publish() reuses the same channel for every send. After the server
+    # closes the channel, what happens next?
+
+    # Setup: "break" the channel
+    try:
+        await connection.publish(b"foo", exchange_name="groups")  # missing
+    except carehare.ChannelClosedByServer as err:
+        assert "404 NOT_FOUND" in str(err)
+
+    # Test: publish: the broken channel was cleaned up
+    await connection.exchange_declare(exchange_name="groups", exchange_type="direct")
+    await connection.publish(b"foo", exchange_name="groups")
+
+
+@ASYNC_TEST
 async def test_publish_and_consume(connection):
     await connection.queue_declare("messages", exclusive=True)
 
@@ -122,6 +138,14 @@ async def test_publish_connection_closed(connection):
     connection._protocol.send_close_if_allowed()
     with pytest.raises(carehare.ConnectionClosed):
         await future
+
+
+@ASYNC_TEST
+async def test_publish_after_disconnect(connection):
+    # https://github.com/CJWorkbench/carehare/issues/1
+    await connection.close()
+    with pytest.raises(carehare.ConnectionClosed):
+        await connection.publish(b"foo", routing_key="messages")
 
 
 @ASYNC_TEST
