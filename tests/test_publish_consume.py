@@ -134,10 +134,15 @@ async def test_consume_close_during_ack(connection):
 @ASYNC_TEST
 async def test_publish_connection_closed(connection):
     await connection.queue_declare("messages", exclusive=True)
-    future = connection.publish(b"foo", routing_key="messages")
+    await connection.publish(b"foo", routing_key="messages")
+    # Build this race:
+    #
+    #   [setup]  ====> Connection.Close
+    #            ====> Basic.Publish
+    #            <==== Connection.Closed
     connection._protocol.send_close_if_allowed()
     with pytest.raises(carehare.ConnectionClosed):
-        await future
+        await connection.publish(b"bar", routing_key="messages")
 
 
 @ASYNC_TEST
