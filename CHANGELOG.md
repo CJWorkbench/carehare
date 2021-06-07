@@ -1,3 +1,10 @@
+v1.0.0 - 2021-06-07
+~~~~~~~~~~~~~~~~~~~
+
+* Support non-default vhosts. (Before, there was a "/" too many.) [#2]
+  This is a major-version bump.
+* Warn (and choose default vhost) if users end their amqp:// URLs with "/".
+
 v0.0.11 - 2021-05-14
 ~~~~~~~~~~~~~~~~~~~~
 
