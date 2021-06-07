@@ -16,4 +16,4 @@ SSL_CONTEXT.load_cert_chain(
     keyfile=str(Path(__file__).parent.parent / "test-server" / "client.key"),
 )
 
-URL = "amqps://guest:guest@localhost/"
+URL = "amqps://guest:guest@localhost"

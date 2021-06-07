@@ -34,6 +34,29 @@ async def test_connect_ssl_error():
 
 
 @ASYNC_TEST
+async def test_connect_vhost():
+    async with carehare.connect(URL + "/myvhost", ssl=SSL_CONTEXT):
+        pass
+
+
+@ASYNC_TEST
+async def test_connect_warn_on_empty_vhost(caplog):
+    with pytest.warns(DeprecationWarning) as record:
+        async with carehare.connect(URL + "/", ssl=SSL_CONTEXT):
+            pass
+    assert record[0].message.args[0] == (
+        'Your RabbitMQ URL ends with a slash, which implies vhost "". This is, surprisingly, an error. carehare is interpreting this to mean "default vhost". To avoid this warning, remove the "/" from the end of your URL.'
+    )
+
+
+@ASYNC_TEST
+async def test_value_error_on_invalid_vhost(caplog):
+    with pytest.raises(ValueError):
+        async with carehare.connect(URL + "/myvhost/", ssl=SSL_CONTEXT):
+            pass
+
+
+@ASYNC_TEST
 async def test_connect_port():
     async with carehare.connect(
         URL.replace("localhost", "localhost:5671"), ssl=SSL_CONTEXT

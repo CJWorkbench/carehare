@@ -2,15 +2,33 @@ from __future__ import annotations
 
 import asyncio
 import ssl
+import warnings
 from functools import partial
 from typing import Optional, Union, cast
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 import pamqp.commands
 import pamqp.common
 
 from ._consume_channel import ConsumeChannel
 from ._protocol import Protocol
+
+
+def url_path_to_vhost(path: str) -> str:
+    if path == "":
+        return "/"  # default vhost
+    elif path == "/":
+        warnings.warn(
+            'Your RabbitMQ URL ends with a slash, which implies vhost "". This is, surprisingly, an error. carehare is interpreting this to mean "default vhost". To avoid this warning, remove the "/" from the end of your URL.',
+            DeprecationWarning,
+        )
+        return "/"  # default vhost
+    elif "/" in path[1:]:
+        raise ValueError(
+            'Invalid AMQP URL path %r: path includes unescaped "/"' % (path,)
+        )
+    else:
+        return unquote(path[1:])
 
 
 class Connection:
@@ -51,13 +69,16 @@ class Connection:
             host = addr[0]
             port = int(addr[1])
 
+        virtual_host = url_path_to_vhost(url.path)
+        print(repr((url.path, virtual_host)))
+
         transport, protocol = await asyncio.wait_for(
             asyncio.get_running_loop().create_connection(
                 protocol_factory=partial(
                     Protocol,
                     username=url.username,
                     password=url.password,
-                    virtual_host=url.path,
+                    virtual_host=virtual_host,
                 ),
                 host=host,
                 port=port,
