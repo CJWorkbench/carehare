@@ -70,7 +70,6 @@ class Connection:
             port = int(addr[1])
 
         virtual_host = url_path_to_vhost(url.path)
-        print(repr((url.path, virtual_host)))
 
         transport, protocol = await asyncio.wait_for(
             asyncio.get_running_loop().create_connection(
