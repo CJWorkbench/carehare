@@ -14,7 +14,7 @@ Usage
 Consumer (``async for``)::
 
     try:
-        async with carehare.connect("amqps://guest:guest@localhost/") as connection:
+        async with carehare.connect("amqps://guest:guest@localhost") as connection:
             try:
                 await connection.queue_declare("my-queue", exclusive=True)
                 async with connection.acking_consumer("my-queue") as consumer:
@@ -42,7 +42,7 @@ Consumer (``async for``)::
 Consumer (``next_delivery``)::
 
     try:
-        async with carehare.connect("amqps://guest:guest@localhost/") as connection:
+        async with carehare.connect("amqps://guest:guest@localhost") as connection:
             try:
                 await connection.queue_declare("my-queue", exclusive=True)
                 async with connection.acking_consumer("my-queue") as consumer:
@@ -70,7 +70,7 @@ Consumer (``next_delivery``)::
 Publisher::
 
     try:
-        async with carehare.connect("amqps://guest:guest@localhost/") as connection:
+        async with carehare.connect("amqps://guest:guest@localhost") as connection:
             try:
                 await connection.publish(b"Hello, world!", routing_key="my-queue")
             except carehare.ServerSentNack:
