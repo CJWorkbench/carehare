@@ -262,7 +262,7 @@ class Protocol(asyncio.Protocol):
             channel = self._channels.pop(channel_id)
             channel.accept_channel_closed_by_server(frame)
             self._channel_id_store.release(channel_id)
-            if hasattr(channel, "exchange_name"):
+            if isinstance(channel, ExchangeChannel):
                 del self._exchange_channels[channel.exchange_name]
         else:
             logger.error(
@@ -274,7 +274,7 @@ class Protocol(asyncio.Protocol):
         close_frame = self._closing_channels.pop(channel_id)
         channel = self._channels.pop(channel_id)
         self._channel_id_store.release(channel_id)
-        if hasattr(channel, "exchange_name"):
+        if isinstance(channel, ExchangeChannel):
             del self._exchange_channels[channel.exchange_name]
         if close_frame is None:
             channel.accept_channel_closed_by_us()
