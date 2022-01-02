@@ -1,3 +1,9 @@
+v1.0.1 - 2022-01-01
+~~~~~~~~~~~~~~~~~~~
+
+* Fix mypy error
+* Don't log INFO during `Protocol.connection_lost()` [#5]
+
 v1.0.0 - 2021-06-07
 ~~~~~~~~~~~~~~~~~~~
 
