@@ -77,6 +77,8 @@ class Protocol(asyncio.Protocol):
         self._frame_writer = FrameWriter(self._transport, 0)
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
+        # Set exception/None on self.open or self.closed, whichever makes sense
+        #
         # ... we'll look to many places for exceptions that may supercede the
         # one asyncio gives us.
         if self._crash_exc:
@@ -91,8 +93,6 @@ class Protocol(asyncio.Protocol):
 
         if self._heartbeat_sender is not None:
             self._heartbeat_sender.cancel()
-
-        logger.info("Connection lost: %r", exc)
 
         if self._channels:
             closed_exc = ConnectionClosed()
