@@ -7,7 +7,7 @@ name = "carehare"
 version = "0.0.0"
 description = "asyncio RabbitMQ client"
 authors = ["Adam Hooper <adam@adamhooper.com>"]
-license = "BSD"
+license = "MIT"
 readme = "README.rst"
 
 [tool.poetry.dependencies]
